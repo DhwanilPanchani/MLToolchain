@@ -1,0 +1,8 @@
+venv/
+models/
+__pycache__/
+*.pyc
+.DS_Store
+results/*
+!results/results.json
+!results/pipeline_comparison.png
