@@ -1,0 +1,59 @@
+================================================================
+QUALCOMM AI HUB — MobileNetV2 Profiling Results
+Device : Snapdragon 8 Elite QRD (Hexagon NPU Gen 4)
+Runtime: QNN context binary (qnn_context_binary)
+================================================================
+
+JOB URLs
+  Compile FP32              : https://workbench.aihub.qualcomm.com/jobs/jpr11m1kg/
+  Quantize INT8             : https://workbench.aihub.qualcomm.com/jobs/jp233q36g/
+  Compile INT8              : https://workbench.aihub.qualcomm.com/jobs/jp3qql8m5/
+  Profile FP32              : https://workbench.aihub.qualcomm.com/jobs/jpvzzy4zg/
+  Profile INT8              : https://workbench.aihub.qualcomm.com/jobs/jgjkk6115/
+
+================================================================
+MobileNetV2 FP32 (QNN / Snapdragon 8 Elite QRD)
+================================================================
+  p50 latency               : 356 µs   (0.356 ms)
+  p99 latency               : 536 µs   (0.536 ms)
+  Peak memory (inference)   : 167.3 MB
+  Total compute ops         : 97
+  NPU ops                   : 97
+  CPU ops                   : 0
+  NPU time share            : 100 %
+
+================================================================
+MobileNetV2 INT8 (QNN / Snapdragon 8 Elite QRD)
+================================================================
+  p50 latency               : 251 µs   (0.251 ms)
+  p99 latency               : 381 µs   (0.381 ms)
+  Peak memory (inference)   : 167.9 MB
+  Total compute ops         : 101
+  NPU ops                   : 101
+  CPU ops                   : 0
+  NPU time share            : 100 %
+
+================================================================
+CROSS-PLATFORM COMPARISON — MobileNetV2, input 1×3×224×224
+================================================================
+
+Backend                  p50 latency    vs ONNX FP32 Mac   vs QNN FP32
+-----------------------  -----------    ----------------   -----------
+PyTorch FP32 (Mac CPU)   22,380 µs      6.0× slower        62.9× slower
+ONNX FP32   (Mac CPU)     3,700 µs      —  (baseline)      10.4× slower
+ONNX INT8   (Mac CPU)    37,600 µs     10.2× slower       105.6× slower
+QNN FP32    (Hexagon)       356 µs     10.4× faster        —  (baseline)
+QNN INT8    (Hexagon)       251 µs     14.7× faster         1.42× faster
+
+Key takeaways:
+  • QNN FP32 on Hexagon NPU is 10× faster than ONNX FP32 on Apple M-series CPU.
+  • QNN INT8 is 150× faster than ONNX INT8 on Mac (37,600 µs → 251 µs).
+  • INT8 quantization delivers a 1.42× speedup on Hexagon vs FP32 on Hexagon.
+  • 100% of compute ops dispatched to NPU — zero CPU fallback ops.
+  • INT8 adds 4 extra quantize/dequantize ops in the graph (101 vs 97).
+
+Notes:
+  - Mac latency: ONNX Runtime CPUExecutionProvider, 100 runs, p50.
+  - Hexagon latency: QNN runtime, 100 runs, warm p50 (first cold run excluded).
+  - Peak memory is higher on Hexagon because activations and weights are pinned
+    in VTCM (Vector TCM) for zero-copy NPU access.
