@@ -55,6 +55,51 @@ ONNX INT8 is slower than FP32 on Apple Silicon because ARM NEON does not acceler
 
 See `results/pipeline_comparison.png` for the bar chart.
 
+## Hexagon NPU Validation — Qualcomm AI Hub
+
+The pipeline was validated on real Snapdragon silicon via [Qualcomm AI Hub](https://aihub.qualcomm.com). The TorchScript model was compiled to a QNN context binary and profiled on a **Snapdragon 8 Elite QRD** (Hexagon NPU Gen 4) — the same SoC family used in Qualcomm's 2024 flagship reference design.
+
+### Jobs submitted
+
+| Job | Type | URL |
+|-----|------|-----|
+| Compile FP32 | `qnn_context_binary` | [jpr11m1kg](https://workbench.aihub.qualcomm.com/jobs/jpr11m1kg/) |
+| Quantize INT8 | PTQ, 100 calibration samples | [jp233q36g](https://workbench.aihub.qualcomm.com/jobs/jp233q36g/) |
+| Compile INT8 | `qnn_context_binary` | [jp3qql8m5](https://workbench.aihub.qualcomm.com/jobs/jp3qql8m5/) |
+| Profile FP32 | on-device Hexagon | [jpvzzy4zg](https://workbench.aihub.qualcomm.com/jobs/jpvzzy4zg/) |
+| Profile INT8 | on-device Hexagon | [jgjkk6115](https://workbench.aihub.qualcomm.com/jobs/jgjkk6115/) |
+
+### Hexagon profiling results
+
+| Metric | FP32 | INT8 |
+|--------|------|------|
+| p50 latency | 356 µs | 251 µs |
+| p99 latency | 536 µs | 381 µs |
+| Peak memory | 167.3 MB | 167.9 MB |
+| Total compute ops | 97 | 101 |
+| NPU ops | 97 (100%) | 101 (100%) |
+| CPU fallback ops | 0 | 0 |
+
+100% of operators dispatched to the Hexagon NPU — no CPU fallback.
+
+### Cross-platform comparison
+
+| Backend | p50 latency | Speedup vs ONNX FP32 Mac |
+|---------|-------------|--------------------------|
+| PyTorch FP32 — Mac CPU | 22,380 µs | 6.0× slower |
+| ONNX FP32 — Mac CPU | 3,700 µs | baseline |
+| ONNX INT8 — Mac CPU | 37,600 µs | 10.2× slower |
+| **QNN FP32 — Hexagon NPU** | **356 µs** | **10.4× faster** |
+| **QNN INT8 — Hexagon NPU** | **251 µs** | **14.7× faster** |
+
+**Key takeaways:**
+- The Hexagon NPU runs MobileNetV2 FP32 **10× faster** than ONNX Runtime on Apple M-series CPU.
+- QNN INT8 is **150× faster** than ONNX INT8 on Mac (37,600 µs → 251 µs) — showing that INT8 gains only materialise on hardware with native INT8 MAC units (Hexagon, x86 VNNI).
+- INT8 gives a **1.42× additional speedup** over FP32 on Hexagon, consistent with the NPU's INT8 throughput advantage per clock.
+- Latency tail (p99) stays within **1.5× of p50** on Hexagon, demonstrating deterministic NPU scheduling vs. the high variance seen on CPU (p99/p50 ≈ 1.75× for ONNX FP32 Mac).
+
+See `results/qai_hub_results.txt` for the full report.
+
 ## Build
 
 ```bash
